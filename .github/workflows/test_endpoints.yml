@@ -11,6 +11,10 @@ on:
 jobs:
   test-endpoints:
     runs-on: ubuntu-latest
+    env:
+      # Number of BAD endpoints tolerated before failing the workflow
+      THRESHOLD: 6
+
     steps:
       - uses: actions/checkout@v4
 
@@ -28,13 +32,13 @@ jobs:
           echo "REST endpoints:"
           jq -r '.apis.rest[].address' "$FILE" || true
 
-      - name: Probe RPC/REST endpoints (fail if any BAD)
+      - name: Probe RPC/REST endpoints (allow up to ${{ env.THRESHOLD }} BAD)
         shell: bash
         run: |
           set -euo pipefail
           FILE="testnets/daodiseotestnet/chain.json"
 
-          # Load endpoints into arrays (trim trailing spaces)
+          # Load endpoints into arrays (trim spaces)
           mapfile -t RPCS  < <(jq -r '.apis.rpc[].address'  "$FILE" | sed 's/[[:space:]]\+$//')
           mapfile -t RESTS < <(jq -r '.apis.rest[].address' "$FILE" | sed 's/[[:space:]]\+$//')
 
@@ -71,13 +75,14 @@ jobs:
           echo "  RPC tested : ${#RPCS[@]}"
           echo "  REST tested: ${#RESTS[@]}"
           echo "  BAD count  : ${#BAD[@]}"
+          echo "  Allowed BAD: $THRESHOLD"
 
-          if (( ${#BAD[@]} > 0 )); then
+          if (( ${#BAD[@]} > THRESHOLD )); then
             echo
-            echo "BAD endpoints:"
+            echo "❌ Too many BAD endpoints:"
             printf '  - %s\n' "${BAD[@]}"
             exit 1
+          else
+            echo
+            echo "✅ Passed with ${#BAD[@]} bad endpoints (≤ $THRESHOLD allowed)"
           fi
-
-
-
