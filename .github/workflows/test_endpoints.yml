@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'daodiseo/**'
+      - 'testnets/daodiseotestnet/**'
       - '.github/workflows/test_endpoints.yml'
 
 jobs:
@@ -13,15 +13,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install -r .github/workflows/tests/requirements.txt
+
+      - name: Install test dependencies
+        run: pip install -r .github/workflows/tests/requirements.txt
 
       - name: Show DAODISEO endpoints
         run: |
-          echo "RPC:" && jq -r '.apis.rpc[].address' daodiseo/chain.json
-          echo "REST:" && jq -r '.apis.rest[].address' daodiseo/chain.json
+          FILE="testnets/daodiseotestnet/chain.json"
+          echo "Using $FILE"
+          echo "RPC:"
+          jq -r '.apis.rpc[].address'  "$FILE"
+          echo "REST:"
+          jq -r '.apis.rest[].address' "$FILE"
 
       - name: Run tests (DAODISEO only)
-        run: pytest -n auto .github/workflows/tests -k daodiseo -vv -s
+        run: pytest -n auto .github/workflows/tests -k daodiseotestnet -vv -s
+
