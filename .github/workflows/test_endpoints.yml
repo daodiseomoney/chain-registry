@@ -1,27 +1,27 @@
+# .github/workflows/test_endpoints.yml  (fork only)
 name: Test RPC and LCD endpoints
 
 on:
-  schedule:
-    - cron: '0 0 * * *' # Runs daily at 00:00 UTC
   workflow_dispatch:
+  push:
+    paths:
+      - 'daodiseo/**'
+      - '.github/workflows/test_endpoints.yml'
 
 jobs:
   test-endpoints:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r .github/workflows/tests/requirements.txt
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.x'
+      - name: Show DAODISEO endpoints
+        run: |
+          echo "RPC:" && jq -r '.apis.rpc[].address' daodiseo/chain.json
+          echo "REST:" && jq -r '.apis.rest[].address' daodiseo/chain.json
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r .github/workflows/tests/requirements.txt
-
-    - name: Run tests
-      run: |
-        pytest --no-header --tb=no -n 64 .github/workflows/tests
+      - name: Run tests (DAODISEO only)
+        run: pytest -n auto .github/workflows/tests -k daodiseo -vv -s
