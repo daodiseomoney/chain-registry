@@ -14,8 +14,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install jq and curl
-        run: sudo apt-get update && sudo apt-get install -y jq curl
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl
 
       - name: Show DAODISEO endpoints
         run: |
@@ -27,38 +29,55 @@ jobs:
           jq -r '.apis.rest[].address' "$FILE" || true
 
       - name: Probe RPC/REST endpoints (fail if any BAD)
+        shell: bash
         run: |
-          set +e
+          set -euo pipefail
           FILE="testnets/daodiseotestnet/chain.json"
-          FAIL=0
 
-          echo ""
+          # Load endpoints into arrays (trim trailing spaces)
+          mapfile -t RPCS  < <(jq -r '.apis.rpc[].address'  "$FILE" | sed 's/[[:space:]]\+$//')
+          mapfile -t RESTS < <(jq -r '.apis.rest[].address' "$FILE" | sed 's/[[:space:]]\+$//')
+
+          BAD=()
+
+          echo
           echo "=== RPC checks (expect HTTP 200 at /status) ==="
-          jq -r '.apis.rpc[].address' "$FILE" | sed 's/[[:space:]]\+$//' | while read -r URL; do
-            [ -z "$URL" ] && continue
-            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 8 --max-time 15 "$URL/status")
-            if [ "$CODE" = "200" ]; then
+          for URL in "${RPCS[@]}"; do
+            [[ -z "${URL:-}" ]] && continue
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 8 --max-time 15 "$URL/status" || echo "000")
+            if [[ "$CODE" == "200" ]]; then
               echo "OK  $URL"
             else
               echo "BAD $URL ($CODE)"
-              FAIL=$((FAIL+1))
+              BAD+=("RPC $URL ($CODE)")
             fi
           done
 
-          echo ""
+          echo
           echo "=== REST checks (expect HTTP 200 at /cosmos/base/tendermint/v1beta1/syncing) ==="
-          jq -r '.apis.rest[].address' "$FILE" | sed 's/[[:space:]]\+$//' | while read -r URL; do
-            [ -z "$URL" ] && continue
-            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 8 --max-time 15 "$URL/cosmos/base/tendermint/v1beta1/syncing")
-            if [ "$CODE" = "200" ]; then
+          for URL in "${RESTS[@]}"; do
+            [[ -z "${URL:-}" ]] && continue
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 8 --max-time 15 "$URL/cosmos/base/tendermint/v1beta1/syncing" || echo "000")
+            if [[ "$CODE" == "200" ]]; then
               echo "OK  $URL"
             else
               echo "BAD $URL ($CODE)"
-              FAIL=$((FAIL+1))
+              BAD+=("REST $URL ($CODE)")
             fi
           done
 
-          echo ""
-          echo "Failures: $FAIL"
-          [ "$FAIL" -eq 0 ]
+          echo
+          echo "Summary:"
+          echo "  RPC tested : ${#RPCS[@]}"
+          echo "  REST tested: ${#RESTS[@]}"
+          echo "  BAD count  : ${#BAD[@]}"
+
+          if (( ${#BAD[@]} > 0 )); then
+            echo
+            echo "BAD endpoints:"
+            printf '  - %s\n' "${BAD[@]}"
+            exit 1
+          fi
+
+
 
