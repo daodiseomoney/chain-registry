@@ -119,7 +119,7 @@
         "provider": "Nodevism"
       },
       {
-        "address": "https://odiseo.blocksync.me/rpc",
+        "address": "https://odiseo-testnet.blocksync.me/rpc",
         "provider": "BlockSync"
       }
     ],
@@ -181,7 +181,7 @@
         "provider": "ChainTools"
       },
       {
-        "address": "https://odiseo.blocksync.me/api",
+        "address": "https://odiseo-testnet.blocksync.me/api",
         "provider": "BlockSync"
       } 
     ],
@@ -223,7 +223,7 @@
         "provider": "ChainTools"
       },
       {
-        "address": "https://odiseo.blocksync.me:24090",
+        "address": "https://odiseo-testnet-grpc.blocksync.me:443",
         "provider": "BlockSync"
       }  
     ]
