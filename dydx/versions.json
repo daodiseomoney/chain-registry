@@ -419,7 +419,7 @@
       "sdk": {
         "type": "cosmos",
         "repo": "https://github.com/dydxprotocol/cosmos-sdk",
-        "version": "v0.50.11",
+        "version": "v0.50.6",
         "tag": "v0.50.6-0.20250918154803-8e8ecbb19aa4"
       },
       "ibc": {
